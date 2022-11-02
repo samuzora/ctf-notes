@@ -1,6 +1,11 @@
 # Bruteforcing login forms
 > Sometimes, the only vulnerability of a site is its users. They may set easy to predict usernames or passwords, which can be an attack vector.
 
+## Bruteforcing Subdomains or Paths
+- Use *dirbuster* in Kali Linux (Click `List Info` for Wordlists `/usr/share/dirbuster/wordlists/directory-list-2.3-medium.txt`)
+- https://subdomainfinder.c99.nl/
+- https://dnshistory.org/historical-dns-records/
+
 ## General technique
 For most login forms, we want to first determine a valid username, and then bruteforce the password. This reduces the time taken from O(n^2) to just O(n), which is a huge improvement for us. But how do we tell if a username is valid or not?
 

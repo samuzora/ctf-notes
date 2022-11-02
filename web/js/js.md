@@ -1,5 +1,7 @@
 # Javascript vulns 
 
+http://jsnice.org/ Deobfuscate JavaScript
+
 ## Prototype pollution
 
 Every object in Javascript inherits from the base Object prototype. 
