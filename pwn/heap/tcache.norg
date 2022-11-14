@@ -1,0 +1,46 @@
+* Key concepts
+
+  GLIBC >= 2.26
+
+  The tcache bin is a LIFO structure, so chunks first freed are first used. It stores up to 7 free chunks of matching
+  size, from 0x20 to 0x90, in a singly-linked list. Each freed chunk looks like this:
+
+  @code
+  ┌───────────────────────────────────────────────────┐
+  │ 00 00 00 00 00 00 00 00 | 00 00 00 00 00 00 00 21 │
+  │---------------------------------------------------│
+  │ fd points to next free  | 00 00 00 00 00 00 00 00 │
+  └───────────────────────────────────────────────────┘
+  @end
+
+  Once the tcache bin is full, the freed chunks will start to go to unsorted bin.
+
+  On glibc >= 2.34, fd is encrypted using xor. The encryptor and decryptor functions are written in Python below:
+
+  @code python
+  def encrypt(pos, ptr):
+    return (pos >> 12) ^ ptr
+  @end
+
+  @code python
+  def decrypt(val):
+    mask = 0xfff << 52
+    while mask:
+        v = val & mask
+        val ^= (v >> 12)
+        mask >>= 12
+    return val
+  @end
+
+  Note that encryption requires the chunk's address. We can find this by first leaking the encrypted fd pointer of the
+  chunk freed later than the victim chunk and decrypt it, giving us the victim chunk's address. Then we encrypt the
+  target pointer with the victim chunk's address, bypassing the encryption check.
+
+* Tcache poisoning
+
+  With a UAF, obtaining a write primitive becomes easy. Writing to a freed chunk will overwrite its fd pointer. This
+  pointer will return our arbitrary pointer from malloc after we malloc() three times (once for the 3rd chunk and once
+  for the 2nd chunk, the last is our target). During the third malloc(), insert our arbitrary write into the payload.
+
+  Malloc and free 3 chunks, and use the 3rd chunk to read the address of the 2nd (if not encrypted, only 2 chunks are
+  required). Edit the victim 2nd chunk to contain the encrypted target address, and malloc 3 times.

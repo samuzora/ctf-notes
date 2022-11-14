@@ -52,4 +52,4 @@ When popping a shell, we definitely won't need any arguments or env vars. Since 
 
 This portion is quite similar to one_gadgets. The registers of interest may not necessarily be NULL or 0, so we need to string some gadgets together to control them. 
 
-After all registers have been settled, we can go ahead and call a gadget with `syscall`. This gadget doesn't need to have a `ret` instruction, as the syscall will be our last gadget in the ropchain.
+After all registers have been settled, we can go ahead and call a gadget with `syscall`. This gadget doesn't need to have a `ret` instruction, as the syscall will be our last last gadget in the ropchain.

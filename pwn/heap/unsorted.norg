@@ -1,0 +1,29 @@
+* Key concepts
+
+  When a chunk is first freed, it goes into the unsorted bin after tcache is filled up. Unsorted bin is a doubly-linked
+  list and FIFO structure, so first chunk to be freed is the first to be malloc().
+
+  The structure of a chunk in unsorted bin looks like this:
+
+  @code
+  +------------------+
+  | prev_size | size |
+  |------------------|
+  | fd      | bk     |
+  +------------------+
+  @end
+
+  One thing to note is that the fd and bk pointers can leak libc base.
+
+  If the chunk is next to the top chunk, it will merge with the top chunk instead of maintaining its structure.
+
+  After it's removed from the unsorted bin, a large value will be written to bk + 0x10 (x64) or bk + 0x8 (x86).
+
+* Unsorted bin attack
+
+  If we control bk, we can get a write primitive, but we can't control the value being written.
+
+  How is this useful? We can overwrite the value of global_max_fast to something large. This allows us to make
+  arbitrary large chunks go into fastbin, which can help with certain constraints.
+
+  > To find the address of global_max_fast: `p &global_max_fast` (need libc base)

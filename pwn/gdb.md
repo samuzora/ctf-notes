@@ -11,7 +11,7 @@ This tool will be your butterknife for pwning (r2 is your bread, IDA Pro is your
 `pattern search $rbp`
 
 ### Hard way (fallback in case of error) (vanilla gdb)
-This method is more tedious, but it yields a greater chance of success. The earlier method depends on various factors, such as our input overwriting the instruction pointer. If our input does not, or if there is some condition before we can do that, we can't use the above method. Thus, it is necessary to use this method too.
+This method is more tedious, but it yields a greater chance of success. The earlier method depends on various factors, such as our input overwriting the instruction pointer. If our input does not, or if there is some condition before we can do that, we can't use the above method. Thus, it is necessary to learn this method too.
 
 Here, you want to diassemble the function and get the address after the function calls gets. You want to break after gets.  
 `disas vuln`
