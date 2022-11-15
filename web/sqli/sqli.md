@@ -156,6 +156,14 @@ You can use LIKE, IN or NOT IN instead
 * mid("abc", 1, 1) == "a"
 * left("abc", 1) == "a"
 
+### -- /**/ # blacklisted
+
+`user=ad%27%7C%7C%27min&pass=a%27+is+not+%27b`
+
+`is not`
+
+Another solution is to escape the closing apostrophe with a `\` so that the password clause becomes part of a string.
+
 ---
 
 ## Stuff to take note of
