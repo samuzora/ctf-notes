@@ -1,0 +1,66 @@
+* Key Concepts
+
+  When a chunk is freed, it doesn't just disappear from the heap. To save space, the heap will store a pointer to the
+  chunk in bins (only if it can't be consolidated with the top chunk) and the chunk's data will be cleared. In place of
+  the data, the `fd` and `bk` addresses are stored, which point to the next and previous free chunk respectively.
+
+** Allocated vs freed
+
+   @code
+                    Allocated
+        ┌──────────────────────────────┐
+   0x00 │ prev size | size | A | M | P │
+        │------------------------------│
+   0x10 │             data             │
+        └──────────────────────────────┘
+
+                      Freed
+        ┌──────────────────────────────┐
+   0x00 │ prev size | size | A | M | P │
+        │------------------------------│
+   0x10 │      fd      |       bk      │
+        └──────────────────────────────┘
+   @end
+
+   The goal of the below exploits is mostly to edit heap metadata, which we can abuse to read from/write to targeted
+   addresses.
+
+* Use after free
+
+  When the pointer to the freed chunk isn't cleared, we can edit or read areas in the chunk, even after it's been
+  allocated to something else. This is known as use after free.
+
+  In addition, we can also edit the `fd` and `bk` pointers to point to other areas, which provides a write-what-where
+  primitive. 
+
+* Double free
+
+  When a chunk is freed twice, it can "exist" in both a freed and allocated state (at least to the binary). This means
+  that allocating the first instance of this chunk will allow us to write to its data section. 
+
+  Referring to {# Allocated vs freed}, you can see that this will actually overwrite the `fd` pointer of the freed
+  instance (which is the actual instance that exists in the program, the allocated instance is arbitrary). 
+
+  After writing to it, we need to free this chunk first. The next chunk freed would be located at our desired address.
+  This is our write primitive.
+
+  > Note - usually you need to -16 off your address, since 0x10 bytes are used for storing metadata
+
+** Protections and bypasses
+
+*** Fasttop
+
+    Libc >2.27 will check the top of the bin before freeing the chunk, to see if it's the same as the chunk being
+    inserted into the bin. This can be mitigated easily:
+
+    @code c
+    free(a);
+    free(b);
+    free(a);
+    @end
+
+*** malloc(): memory corruption
+
+    If the chunk to be allocated has a size that doesn't match the bin's size, malloc() will throw an error. This cannot
+    be mitigated easily as the chunk's metadata must be aligned exactly to fall into the bin's size, which prevents us
+    from writing anywhere we want. We'll need to fake the metadata of the chunk somehow.

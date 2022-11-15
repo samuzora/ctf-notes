@@ -84,3 +84,6 @@ For example:
 payload = b'A' * 1337 + p32(0x12345678) + p32(0xdeadbeef) + p32(0xcafebabe)
 # 		  win function		first param		  second param and so on...
 ```
+
+Note that if you want to chain functions after the function with arguments, you need to pop the TOS so that we don't
+return to that undefined address. Any register is fine, eg: `pop ebp; ret`.

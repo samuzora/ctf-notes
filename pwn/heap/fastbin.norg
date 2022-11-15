@@ -1,0 +1,20 @@
+* Key concepts
+
+  Fastbins are FIFO singly-linked lists. There are 10 fastbins which are separated by specific sizes of chunks from 0x10
+  to 0x90. 
+
+  The structure of a freed chunk in a fastbin looks like this:
+
+  @code
+  +------------------+
+  | prev_size | size |
+  |------------------|
+  | fd        | ?    |
+  +------------------+
+  @end
+
+  The top chunk in a fastbin will have fd = 0.
+
+* Fastbin attack
+
+  With a UAF you can edit the fd to point to arbitrary addresses.

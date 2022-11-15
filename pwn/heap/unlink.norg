@@ -1,0 +1,133 @@
+* Key concepts
+
+  When a chunk next to another free chunk is freed, and it doesn't go into the fastbin, unlink() is called. Below is
+  what happens to that chunk during unlink():
+
+  @code c
+  FD = p->fd;
+  BK = p->bk;
+
+  FD->bk = BK;
+  BK->fd = FD;
+  @end
+
+  You see that what's written to FD->bk depends on BK, which depends on p->bk. If we control p->fd and p->bk, we have
+  our write primitive.
+
+* Unlink exploit
+
+  @code c
+  // here, p->fd has been overwritten to 0x55555, and p->bk has been overwritten to 0deadbeef
+  // afterwards, p was allocated which called unlink()
+  FD = p->fd; // FD = 0x555555
+  BK = p->bk; // BK = 0xdeadbeef
+
+  FD->bk = BK; // 0x555555 + 0x10 + 0x8 = 0xdeadbeef (0x10 is metadata, 0x8 is int64 fd)
+  BK->fd = FD; // 0xdeadbeef + 0x10 = 0x555555 (0x10 is metadata)
+  @end
+
+  By overwriting the metadata of a freed chunk, we can cause its fd to point to arbitrary addresses, and insert our
+  desired value into bk. Heap overflow makes this easy to do.
+
+** Steps
+
+   Malloc 2 chunks of size 0xa0 (or anything that can't fit in fastbins)
+
+   @code
+        ┌──────────────────────────────┐
+   0x00 │ prev size |   size == 0xa1   │ -> chunk1
+        │------------------------------│
+   0x00 │ psize == 0x00 | size == 0xa0 │ -> fake chunk (free)
+        │------------------------------│
+   0x10 │   fd == 0xc0  |  bk == 0x00  │
+        │──────────────────────────────│
+   0x20 │             data             │
+        │──────────────────────────────│
+   0x30 │             ...              │
+        │──────────────────────────────│
+   0xb0 │             data             │
+        │──────────────────────────────│
+   0xc0 │    data   |   size == 0xa1   │ -> chunk2
+        │──────────────────────────────│
+   0xd0 │             ...              │
+        │------------------------------│
+  0x160 │             data             │
+        └──────────────────────────────┘
+   @end
+
+   Forge a fake chunk in chunk1. This chunk should act like a free chunk with fd and bk pointing to our target (ie.
+   0x200). fd has to be -0x10 and bk has to be -0x18 of your target.
+
+   Lastly, for large chunks which go into the sorted largebin, they have to be sorted so in addition to fd and bk in the
+   data section, they also have fd_nextsize and bk_nextsize, which point to the next larger and smaller free chunks. We
+   want to set fd_nextsize to 0x0, so the program won't check for any larger chunks, as this would be the largest
+   already.
+
+   @code
+        +---------------------------------------+
+   0x00 | prev size        |    size == 0xa1    | -> chunk1
+        |---------------------------------------|
+   0x10 | prev size == 0x0 |    size == 0xa1    | -> fake chunk
+        |---------------------------------------|
+   0x20 | fd = 0x200 - 0x10 | bk = 0x200 - 0x18 |
+        |---------------------------------------|
+   0x30 |          fd_nextsize == 0x0           |
+        |---------------------------------------|
+   0x40 |                 ...                   |
+        |---------------------------------------|
+   0xb0 |                  data                 |
+        |---------------------------------------|
+   0xc0 |    data      |      size == 0xa1      | -> chunk2
+        |---------------------------------------|
+   0xd0 |                  ...                  |
+        |---------------------------------------|
+  0x160 |                  data                 |
+        +---------------------------------------+
+   @end
+
+   We also need to change the metadata of chunk2, such that it thinks the previous chunk is freed and pointing to our
+   fake chunk. In addition we set prev size to 0xa0 so we pass the `size == prev size` check, and set chunk2 size from
+   0xb1 to 0xb0 (remove the prev_used bit so it thinks our fake chunk is freed). 
+
+   @code
+        +---------------------------------------+
+   0x00 |     prev size    |    size == 0xa1    | -> chunk1
+        |---------------------------------------|
+   0x10 | prev size == 0x0 |    size == 0xa1    | -> fake chunk
+        |---------------------------------------|
+   0x20 | fd = 0x200 - 0x10 | bk = 0x200 - 0x18 |
+        |---------------------------------------|
+   0x30 |                 ...                   |
+        |---------------------------------------|
+   0xb0 |                  data                 |
+        |---------------------------------------|
+   0xc0 | prev size == 0xa0 |   size == 0xb0    | -> chunk2
+        |---------------------------------------|
+   0xd0 |                  ...                  |
+        |---------------------------------------|
+  0x160 |                  data                 |
+        +---------------------------------------+
+   @end
+
+   Using a heap overflow we can achieve all of the above.
+
+   Now, when we free chunk2, it thinks that it's adjacent to a free chunk, and will trigger the unlink() macro.
+
+
+
+** Limitations
+
+   Both fd and bk will get written, so if either is protected/non-existent memory, the program will crash.
+
+** Protections
+
+*** Double linked list corruption
+
+    By checking if `p->fd->bk == p` and `p->bk->fd == p`, the binary can prevent easy control of this write primitive. 
+
+    To mitigate this, we can forge a fake chunk and trick the binary into thinking the fake chunk is valid. Then we
+    place this fake chunk at our desired location in memory.
+
+*** Size check
+
+    The size of the fake chunk must be equal to the previous size of the 
