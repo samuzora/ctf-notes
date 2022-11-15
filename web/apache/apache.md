@@ -27,7 +27,7 @@ This is a very advanced exploit, and I shall keep it here for reference until I 
 - Needs `mod_cgi` enabled in Apache config (not default)
 - Apache needs path traversal perms granted for `/bin` or `/` (usually not the case!)
 
-`cgi-bin` - a(n obsolete) folder that is used to store and serve static content in Apache. It tells the server how to pass data to and from an application.
+`cgi-bin` - an obsolete folder that is used to store and serve static content in Apache. It tells the server how to pass data to and from an application.
 
 This exploit is a form of path traversal: it goes to `cgi-bin`, then `.%%32%65/` (../ dot in urlencoded twice) up to root and down to `/bin/sh`. It's urldecoded twice (once by filter, once by backend). In Apache v2.4.49, double encoding is not necessary, but in v2.4.50 it is.
 
