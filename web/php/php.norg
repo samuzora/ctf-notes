@@ -1,0 +1,88 @@
+* Weak comparison
+
+  Just take note of == vs ===, and how PHP type-casting works
+
+* strcmp()
+
+  Requires PHP < 7.4.33
+
+  @code php
+  <?php
+  strcmp('asdf', 'asdf') == 0;
+  strcmp(array(), 'asdf') == NULL == 0;
+  ?>
+  @end
+
+  That's all :)
+
+  If you want to pass an array in GET or POST application/x-www-form-urlencoded, you can do something like this:
+
+  @code
+  a[]=foobar
+  @end
+
+* extract()
+
+  @code php
+  <?php
+  $a = 'hello';
+  extract(array("a" => 'goodbye'));
+  echo $a; // goodbye
+  ?>
+  @end
+
+  `extract` will override the global namespace of the program. Handy for variable overwrite.
+
+* preg_match
+
+  Requires PHP < 5.6.40
+
+  @code php
+  <?php
+  echo preg_replace('/a/e', 'system("ls")', 'abc');
+  ?>
+  @end
+
+  In the 1st argument of preg_match, use the `e` flag. In the 2nd argument provide your code to be executed.
+
+* password_verify
+
+  A null byte in the hash of your password will cause the trailing bytes to be truncated.
+
+* unserialize()
+
+  In PHP's `unserialize()`, oftentimes a object is expected server-side after deserialization. This can possibly allow
+  RCE or various authentication bypasses. There are a few limitations/things to take note of:
+
+** You can only override properties, not functions. 
+
+   Unfortunately, PHP does not serialize methods, only variables (static properties like strings, integers, booleans).
+   In addition, the trick with `"system"('ls')` doesn't work. This is probably due to the internal workings of PHP -
+   unlike Python where everything is a class, functions and constants are fundamentally different in PHP.
+
+** The object you serialize must have a matching name on the server.
+
+   What does this mean? In essence, the object you serialize doesn't have to be exactly the same - but it must be
+   defined server-side already with the same name.
+
+** If custom magic functions are overwritten in the object, it's your chance to get RCE!
+
+   Magic functions can be called implicitly by the server. Depending on how the function is overwritten, it's possible
+   to achieve your goal through the magic function.
+
+   Below is a list of magic functions and how they're invoked:
+
+*** __toString()
+
+    Invoked when the object has to be converted to a string, like `echo $obj`.
+
+*** __wakeup()
+
+    Invoked when the object is deserialized.
+
+    ---
+
+** POP chains
+
+   Property-Oriented Programming is another way to exploit `unserialize()`. In essence, you jump from object to object,
+   exploiting their magic functions to get RCE. This includes nesting objects in each other.
