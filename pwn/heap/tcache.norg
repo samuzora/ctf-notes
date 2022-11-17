@@ -20,9 +20,7 @@
   @code python
   def encrypt(pos, ptr):
     return (pos >> 12) ^ ptr
-  @end
 
-  @code python
   def decrypt(val):
     mask = 0xfff << 52
     while mask:
@@ -42,5 +40,5 @@
   pointer will return our arbitrary pointer from malloc after we malloc() three times (once for the 3rd chunk and once
   for the 2nd chunk, the last is our target). During the third malloc(), insert our arbitrary write into the payload.
 
-  Malloc and free 3 chunks, and use the 3rd chunk to read the address of the 2nd (if not encrypted, only 2 chunks are
+  Malloc and free 3 chunks, and use the 3rd chunk to read the address of the 2nd (if not encrypted, reading is not
   required). Edit the victim 2nd chunk to contain the encrypted target address, and malloc 3 times.

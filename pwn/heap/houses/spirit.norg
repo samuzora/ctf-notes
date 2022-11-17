@@ -1,0 +1,25 @@
+* House of Spirit
+
+  /Can be used for fastbin or tcache/
+
+  This attack can be used when you have limited control over some region of memory, and can malloc a pointer to it. The
+  result is allocating a chunk to that region, which allows you to gain better control over the region and maybe beyond
+  the region as well, limited to the size of the chunk. (Could you make more fake chunks and possibly have control over
+  the entire region? I'm not sure.)
+
+** Overview
+
+   Assume we are able to do these 2 things:
+
+   ~ Write an integer slightly before the address we wish to overwrite
+   ~ Get malloc() to return a pointer at the address we wish to overwrite
+   -- Usually done by overwriting the metadata of a freed chunk in fastbin
+
+   When malloc() returns a chunk from fastbin, it checks if the size is a valid fastbin size. If it isn't, the program
+   will exit with `malloc(): memory corruption (fast)`. This is why we need no. 1, so that we can bypass this check.
+
+   In addition, the chunk's size must also correspond to the fastbin's size. The fastbin's size is dependent on the
+   chunk you used to get the bad pointer from.
+
+   On 0x86, the integer size must be at least 4 bytes and at most chunk_size from the desired write location.
+   On 0x64, the integer size must be at least 8 bytes and at most chunk_size from the desired write location.
