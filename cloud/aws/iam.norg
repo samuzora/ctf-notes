@@ -1,0 +1,13 @@
+* Get user
+
+  `aws iam get-user`
+
+* Get user policies
+
+  `aws iam list-attached-user-policies --user-name`
+
+* Describe policy
+
+  `aws iam get-policy --policy-arn`
+
+  `aws iam get-policy-version --policy-arn --version-id`

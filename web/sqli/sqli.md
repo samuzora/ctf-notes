@@ -148,6 +148,8 @@ You can use LIKE, IN or NOT IN instead
 	- WHERE pw LIKE '' (can use % wildcard as a replacement for substring)
 - IN / NOT IN
 	- WHERE substring(pw, 1, 1) IN ('a')
+    - where password = '' in (0)||''
+        - trailing ||'' to get rid of the trailing quote
 
 ### SUBSTR blacklisted
 

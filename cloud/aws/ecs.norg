@@ -1,0 +1,8 @@
+* Background
+
+  ECS is similar to EC2.
+
+  In the env, you can find a variable `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`, which you can access at
+  `http://169.254.170.2/`. It will give you the key pair and the token used for this ECS.
+
+  If you have a SSRF, you can try `file:///proc/self/environ` to get env

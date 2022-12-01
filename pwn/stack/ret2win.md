@@ -87,3 +87,7 @@ payload = b'A' * 1337 + p32(0x12345678) + p32(0xdeadbeef) + p32(0xcafebabe)
 
 Note that if you want to chain functions after the function with arguments, you need to pop the TOS so that we don't
 return to that undefined address. Any register is fine, eg: `pop ebp; ret`.
+
+Another way is to add the 2nd function call between the 1st function and the 1st function's argument.
+
+If your payload doesn't seem to work, try adding some padding between the function call and the argument.

@@ -1,0 +1,15 @@
+* Listing buckets
+
+  `aws s3 ls`
+
+* Listing contents of buckets
+
+  `aws s3 ls s3://<bucket-endpoint>`
+
+* Copy contents of bucket to local directory
+
+  `aws s3 sync <bucket-name> ./`
+
+* Ref
+
+  [https://n0j.github.io/2017/10/02/aws-s3-ctf.html]

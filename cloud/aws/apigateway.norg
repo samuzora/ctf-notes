@@ -1,0 +1,20 @@
+* List APIs
+
+  `aws apigateway get-rest-apis`
+
+* Describe API
+
+  `aws apigateway get-rest-api --rest-api-id`
+
+* Get stages
+
+  `aws apigateway get-stages --rest-api-id`
+
+* Invoke API
+
+  `curl -X METHOD https://<rest-api-id>.execute-api.<region-name>.amazonaws.com/<stage>/<resource> --user \
+  <key-id>:<secret-key> -cur-aws-sigv4 aws:amz:<region-name>:execute-api`
+
+  (or from your browser)
+
+  Resource could be a Lambda function

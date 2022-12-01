@@ -1,0 +1,16 @@
+* Background
+
+  Lambdas are functions that can be ran on demand instead of hosting an entire server for it.
+
+  The credentials for these lambdas are usually found in env vars. Sometimes when an error occurs the lambda will dump
+  its env, which leaks your credentials.
+
+  If you have SSRF, you can try `file:///proc/self/environ` to get env.
+
+* List functions
+
+  `aws lambda list-functions`
+
+* Describe function
+
+  `aws lambda get-policy --function-name`

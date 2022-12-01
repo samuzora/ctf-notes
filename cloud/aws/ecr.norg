@@ -1,0 +1,22 @@
+* Background
+
+  ECR is a AWS registry to store Docker images.
+
+* Get repositories
+
+  `aws ecr describe-repositories --registry-id <aws-account-id>`
+
+** Get AWS account id
+
+   `aws sts get-caller-identity --output text --query Account`
+
+* List images
+
+  `aws ecr list-images --registry-id <aws-account-id> --repository-name <repo-name>`
+
+* Pull image (for Podman)
+
+  `aws ecr get-login-password --region <region-name> | podman login --username AWS --password-stdin
+  <aws-account-id>.dkr.ecr.<region-name>.amazonaws.com`
+
+  `podman pull <aws-account-id>.dkr.ecr.<region-name>.amazonaws.com/<repo-name>:latest`

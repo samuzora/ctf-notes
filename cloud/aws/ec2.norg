@@ -1,0 +1,19 @@
+* Background
+
+  EC2 instances are IaaS containers that have attachable volumes. You can create snapshots of volumes and attach to other
+  EC2 instances.
+
+  You can access the EC2 metadata at the private IP 169.254.169.254. If you have SSRF you can try grabbing AWS key pairs
+  from here since IAM credentials are stored here.
+
+* List volumes, snapshots and instances
+
+  `aws ec2 describe-volumes`
+
+  `aws ec2 describe-snapshots`
+
+  `aws ec2 describe-instances`
+
+* Create ssh connection to EC2 instance
+
+  `aws ec2-instance-connect send-ssh-public-key --instance-id --instance-os-user --ssh-public-key`
