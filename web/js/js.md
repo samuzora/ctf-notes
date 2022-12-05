@@ -44,3 +44,5 @@ If we can pass in functions, simply target an attribute function that is being c
 ### Other stuff
 
 Every attribute of window is a global variable (and vice versa!) This means that asdf == window.asdf, window.name == name, window.location == location etc. If we are able to set these variables, we can possibly control these values to arbitrary stuff, enabling XSS etc.
+
+<https://github.com/BlackFan/client-side-prototype-pollution>

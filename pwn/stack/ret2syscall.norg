@@ -57,7 +57,9 @@
      Instead, we need to utilize gadgets such as `mov qword ptr [rax], rdx`, which will copy the contents of `$rdx` into
      the address pointed at by `$rax`. We can easily control this by manipulating gadgets. 
 
-**** Manually piece together the string `/bin/sh` char by char. TODO: find a writeup explaining this
+**** Manually piece together the string `/bin/sh` char by char.
+
+     TODO: find a writeup explaining this
 
      ---
 
@@ -71,7 +73,7 @@
     After all registers have been settled, we can go ahead and call a gadget with `syscall`. This gadget doesn't need to
     have a `ret` instruction, as the syscall will be our last last gadget in the ropchain.
 
-Besides `/bin/sh`, we can also make calls to open/read/write to open the flag file and read it. (ref.
+    Besides `/bin/sh`, we can also make calls to open/read/write to open the flag file and read it. (ref.
     DU20/return-to-what-revenge). The general idea is to find a syscall gadget with a ret so that we can chain
     multiple syscalls. This can be done with `ROPgadget --multibr` which allows mutli-branching gadgets.
 
