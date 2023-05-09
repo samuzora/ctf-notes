@@ -42,7 +42,7 @@ In essence: `hello%n` will write 0x5 into the "address" that the first value on 
 ### Controlling the address
 First, we need to determine our offset through arbitrary read. This offset will be the start of our string. 
 If it isn't aligned to a particular offset, we can align it by adding the correct number of bytes to the start of our input. 
-For example, if our input is AAAABBBB, and `%4$p` prints `0x42414141` and `$5$p` prints `0x00424242`, just shift the input by 1, ie. AAAAABBBB
+For example, if our input is AAAABBBB, and `%4$p` prints `0x42414141` and `%5$p` prints `0x00424242`, just shift the input by 1, ie. AAAAABBBB
 
 We can then overwrite the GOT entry of a function called after `printf`, and change it to something else (address of main)
 
