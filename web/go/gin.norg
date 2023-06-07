@@ -1,0 +1,44 @@
+*  X-Forwarded-Prefix and `redirectTrailingSlash`
+
+  In Gin, there is a `redirectTrailingSlash` function that will cause the router to redirect requests with a trailing slash to the same path without the slash. 
+  It respects a special header called `X-Forwarded-Prefix` that will prefix the requested URI with the value of this header.
+
+  This behaviour was introduced by this commit: {https://github.com/gin-gonic/gin/pull/1238/commits/0906ea946d9f39dc5b8e9b4832d1eb9eaa8ca35f}
+
+  To demo this, let's have a given context:
+
+  @code go
+  if strings.Contains(reqUrl, "flag") || strings.Contains(reqUrl, "curl") || strings.Contains(reqUrl, "%") {
+      c.JSON(http.StatusBadRequest, gin.H{"message": "Something wrong"})
+      return
+  }
+  if reqHeaderKey != "" || reqHeaderValue != "" {
+      req.Header.Set(reqHeaderKey, reqHeaderValue)
+  }
+
+  resp, err := client.Do(req)
+  if err != nil {
+      c.JSON(http.StatusBadRequest, gin.H{"message": "Something wrong"})
+      return
+  }
+
+  defer resp.Body.Close()
+
+  bodyText, err := ioutil.ReadAll(resp.Body)
+  if err != nil {
+      c.JSON(http.StatusBadRequest, gin.H{"message": "Something wrong"})
+      return
+  }
+  statusText := resp.Status
+
+  c.JSON(http.StatusOK, gin.H{
+      "body":   string(bodyText),
+      "status": statusText,
+  })
+  @end
+
+  In this example, I have a function that will make a request to a given URL with a given header, and return the response body and status code.
+  However, it blocks URIs that have `flag`, `curl` or `%`, and returns a 400 error.
+
+  I can issue a request as such: `http://example.com//` with header `X-Forwarded-Prefix: /flag`. 
+  This triggers the `redirectTrailingSlash` function which prefixes and changes the URI visited to `http://example.com/flag/`.

@@ -1,0 +1,3 @@
+* Spoofing IP
+
+  `c.RemoteIP()` reads the actual client IP, while `c.ClientIP()` respects headers such as `X-Forwarded-For` and `X-Real-IP`, allowing for spoofing.

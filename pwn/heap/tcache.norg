@@ -31,7 +31,7 @@
   @end
 
   Note that encryption requires the chunk's address. We can find this by first leaking the encrypted fd pointer of the
-  chunk freed later than the victim chunk and decrypt it, giving us the victim chunk's address. Then we encrypt the
+  chunk freed after the victim chunk and decrypt it, giving us the victim chunk's address. Then we encrypt the
   target pointer with the victim chunk's address, bypassing the encryption check.
 
 * Tcache poisoning

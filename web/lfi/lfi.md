@@ -160,3 +160,6 @@ If you need spaces in your RCE, you can use ${IFS} (+ won't work as pear will tr
 
 *If your browser automatically URLencodes the special characters (`<?'>`), use curl or Burp Pro instead*
 
+### Other LFI2RCE
+
+https://blog.stevenyu.tw/2022/05/07/advanced-local-file-inclusion-2-rce-in-2022/

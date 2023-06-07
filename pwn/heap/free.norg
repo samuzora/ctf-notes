@@ -9,18 +9,20 @@
    @code
                     Allocated
         ┌──────────────────────────────┐
-   0x00 │ prev size | size | A | M | P │
+   0x00 │ prev size    | size          │
         │------------------------------│
    0x10 │             data             │
         └──────────────────────────────┘
 
                       Freed
         ┌──────────────────────────────┐
-   0x00 │ prev size | size | A | M | P │
+   0x00 │ prev size    | size          │
         │------------------------------│
    0x10 │      fd      |       bk      │
         └──────────────────────────────┘
    @end
+   The prev_size value is only set if the previous (adjacent) chunk is free. This indicates the size of that chunk.
+   ---
 
    The goal of the below exploits is mostly to edit heap metadata, which we can abuse to read from/write to targeted
    addresses.
@@ -64,3 +66,8 @@
     If the chunk to be allocated has a size that doesn't match the bin's size, malloc() will throw an error. This cannot
     be mitigated easily as the chunk's metadata must be aligned exactly to fall into the bin's size, which prevents us
     from writing anywhere we want. We'll need to fake the metadata of the chunk somehow.
+
+* __free_hook
+
+  This hook is especially good for RCE since a pointer to the chunk is passed to `__free_hook`. (btw - write to it via libc.sym.__free_hook)
+  With this, `system("/bin/sh\0")` becomes really trivial and easy.

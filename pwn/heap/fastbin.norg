@@ -9,12 +9,29 @@
   +------------------+
   | prev_size | size |
   |------------------|
-  | fd        | ?    |
+  | fd               |
   +------------------+
   @end
 
   The top chunk in a fastbin will have fd = 0.
 
+  The maximum size of a fastbin chunk is determined by the global variable global_max_fast (can be found in libc). 
+  This variable can't be edited normally, but by using a partial arbitrary write (eg. unsorted attack) we can set it to something extremely large, which can help with various restrictions.
+
 * Fastbin attack
 
-  With a UAF you can edit the fd to point to arbitrary addresses.
+  With a UAF you can edit the fd to point to arbitrary addresses. This assumes the following:
+  ~ The poisoned chunk (ie. the UAFed one) is of a size that can fit in fastbin.
+
+  However, to do so, these constraints must be fulfilled:
+  ~ The chunk with our forged fd pointer must have size /x/.
+  ~ The fake chunk we want to write to, must already have the value /x/ at addr-0x10. (This is quite tough, since we can't manipulate it easily. But shifting our write address helps)
+  ~ The chunk we request from malloc (for our arbitrary write) must also have size /x/ (ie. malloc(/x/))
+  ~ /x/ must be a valid fastbin size.
+
+  If any of the above are not met, you might encounter the following error:
+  `malloc(): memory corruption (fast)`
+
+  If successful, you must do the following to trigger the write:
+  ~ Malloc a chunk of size /x/. This chunk loads the poisoned `fd` value into the fastbin, so the next chunk allocated would be at our desired write address.
+  ~ Malloc another chunk of size /x/, with our desired write value. This is our arbitrary write.

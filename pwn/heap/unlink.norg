@@ -22,12 +22,16 @@
   FD = p->fd; // FD = 0x555555
   BK = p->bk; // BK = 0xdeadbeef
 
-  FD->bk = BK; // 0x555555 + 0x10 + 0x8 = 0xdeadbeef (0x10 is metadata, 0x8 is int64 fd)
-  BK->fd = FD; // 0xdeadbeef + 0x10 = 0x555555 (0x10 is metadata)
+  FD->bk = BK; // [0x555555 + 0x10 + 0x8] = 0xdeadbeef (0x10 is metadata, 0x8 is int64 fd)
+  BK->fd = FD; // [0xdeadbeef + 0x10] = 0x555555 (0x10 is metadata)
   @end
 
   By overwriting the metadata of a freed chunk, we can cause its fd to point to arbitrary addresses, and insert our
   desired value into bk. Heap overflow makes this easy to do.
+
+  The concept is to forge a fake chunk with fd and bk of our choosing. When
+  another legit chunk adjacent to our fake chunk is freed, we want it to trigger
+  the unlink macro, thus writing our desired values.
 
 ** Steps
 
@@ -60,12 +64,11 @@
 
    Lastly, for large chunks which go into the sorted largebin, they have to be sorted so in addition to fd and bk in the
    data section, they also have fd_nextsize and bk_nextsize, which point to the next larger and smaller free chunks. We
-   want to set fd_nextsize to 0x0, so the program won't check for any larger chunks, as this would be the largest
-   already.
+   want to set fd_nextsize to 0x0, so the program won't check for any larger chunks. (since this chunk by right will be the largest)
 
    @code
         +---------------------------------------+
-   0x00 | prev size        |    size == 0xa1    | -> chunk1
+   0x00 |     prev size    |    size == 0xa1    | -> chunk1
         |---------------------------------------|
    0x10 | prev size == 0x0 |    size == 0xa1    | -> fake chunk
         |---------------------------------------|
@@ -112,8 +115,6 @@
    Using a heap overflow we can achieve all of the above.
 
    Now, when we free chunk2, it thinks that it's adjacent to a free chunk, and will trigger the unlink() macro.
-
-
 
 ** Limitations
 
