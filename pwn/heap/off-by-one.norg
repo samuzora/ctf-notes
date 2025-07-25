@@ -1,0 +1,36 @@
+* Off by one vuln
+
+With off-by-one, we exploit prev_inuse, prev_size and unsorted consolidation to get overlapping chunks.
+
+@code c
+void *a = malloc(0x1f8);
+void *b = malloc(0x90);
+void *c = malloc(0x20); // to prevent consolidation into forest
+@end
+
+@code c
+/* consolidate backward */
+if (!prev_inuse(p)) {
+  prevsize = prev_size (p);
+  size += prevsize;
+  p = chunk_at_offset(p, -((long) prevsize));
+  if (__glibc_unlikely (chunksize(p) != prevsize))
+    malloc_printerr ("corrupted size vs. prev_size while consolidating");
+  unlink_chunk (av, p);
+}
+@end
+
+Assuming we can overflow a, we can overwrite the metadata of b:
+
+@code
+0x0 0000000000000000 0000000000000201
+0x1 0000000000000000 00000000000001f0 <- fake chunk
+0x2 0000000000000001 0000000000000001
+...
+0x3 6161616161616161 6161616161616161  
+0x4 00000000000001f0 0000000000000100 <- b
+@end
+
+When b is freed, it will think that the fake chunk is also free and try to consolidate with it. Fake chunk must have the correct size and should point to itself to pass unlink check.
+
+Afterwards, fake chunk can be split up into fastbinable chunks. 

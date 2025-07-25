@@ -1,0 +1,5 @@
+* WAF
+
+** AWS ELB
+
+The WAF doesn't check past 8192 characters of a request body or json. Thus, if we want to evade the filter, we can just add 8192 spaces to the front (remember to url-encode if necessary). 

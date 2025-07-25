@@ -70,4 +70,4 @@
 * __free_hook
 
   This hook is especially good for RCE since a pointer to the chunk is passed to `__free_hook`. (btw - write to it via libc.sym.__free_hook)
-  With this, `system("/bin/sh\0")` becomes really trivial and easy.
+  With this, `system("/bin/sh\0")` becomes really trivial and easy. Unfortunately removed in 2.34

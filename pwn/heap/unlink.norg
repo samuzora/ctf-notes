@@ -1,23 +1,45 @@
 * Key concepts
 
-  When a chunk next to another free chunk is freed, and it doesn't go into the fastbin, unlink() is called. Below is
-  what happens to that chunk during unlink():
+@code c
+    /* consolidate backward */
+    if (!prev_inuse(p)) {
+      prevsize = prev_size (p);
+      size += prevsize;
+      p = chunk_at_offset(p, -((long) prevsize));
+      if (__glibc_unlikely (chunksize(p) != prevsize))
+        malloc_printerr ("corrupted size vs. prev_size while consolidating");
+      unlink_chunk (av, p);
+    }
 
-  @code c
-  FD = p->fd;
-  BK = p->bk;
+    static void
+    unlink_chunk (mstate av, mchunkptr p)
+    {
+      if (chunksize (p) != prev_size (next_chunk (p)))
+        malloc_printerr ("corrupted size vs. prev_size");
 
-  FD->bk = BK;
-  BK->fd = FD;
-  @end
+      mchunkptr fd = p->fd;
+      mchunkptr bk = p->bk;
 
-  You see that what's written to FD->bk depends on BK, which depends on p->bk. If we control p->fd and p->bk, we have
-  our write primitive.
+      if (__builtin_expect (fd->bk != p || bk->fd != p, 0))
+        malloc_printerr ("corrupted double-linked list");
+
+      fd->bk = bk;
+      bk->fd = fd;
+      // ...
+    }
+@end
+
+When a freed chunk has `PREV_INUSE` bit unset, it will execute `unlink_chunk`,
+which writes (of the prev chunk) `fd->bk` and `bk->fd`. If `fd` and `bk` of
+prev chunk aren't pointing to heap, but instead pointing somewhere else (eg.
+above chunk1 pointer in .bss, stack etc), it will overwrite chunk1 pointer with
+memory slightly above chunk1 pointer, thus we can control chunk1 pointer and
+subsequently attain write primitive.
 
 * Unlink exploit
 
   @code c
-  // here, p->fd has been overwritten to 0x55555, and p->bk has been overwritten to 0deadbeef
+  // here, p->fd has been overwritten to 0x55555, and p->bk has been overwritten to 0xdeadbeef
   // afterwards, p was allocated which called unlink()
   FD = p->fd; // FD = 0x555555
   BK = p->bk; // BK = 0xdeadbeef
@@ -59,12 +81,15 @@
         └──────────────────────────────┘
    @end
 
-   Forge a fake chunk in chunk1. This chunk should act like a free chunk with fd and bk pointing to our target (ie.
-   0x200). fd has to be -0x10 and bk has to be -0x18 of your target.
+   Forge a fake chunk in chunk1. This chunk should act like a free chunk with
+   fd and bk pointing to the pointer to chunk1 - 0x10 and chunk - 0x18 (such
+   that we can pass the unlink check).
 
-   Lastly, for large chunks which go into the sorted largebin, they have to be sorted so in addition to fd and bk in the
-   data section, they also have fd_nextsize and bk_nextsize, which point to the next larger and smaller free chunks. We
-   want to set fd_nextsize to 0x0, so the program won't check for any larger chunks. (since this chunk by right will be the largest)
+   Lastly, for large chunks which go into the sorted largebin, they have to be
+   sorted so in addition to fd and bk in the data section, they also have
+   fd_nextsize and bk_nextsize, which point to the next larger and smaller free
+   chunks. We want to set fd_nextsize to 0x0, so the program won't check for
+   any larger chunks. (since this chunk by right will be the largest)
 
    @code
         +---------------------------------------+
@@ -88,9 +113,9 @@
         +---------------------------------------+
    @end
 
-   We also need to change the metadata of chunk2, such that it thinks the previous chunk is freed and pointing to our
-   fake chunk. In addition we set prev size to 0xa0 so we pass the `size == prev size` check, and set chunk2 size from
-   0xb1 to 0xb0 (remove the prev_used bit so it thinks our fake chunk is freed). 
+   With off-by-one or heap overflow, we can overwrite `prev_size` and
+   `prev_in_use` of chunk2, so that when it's freed it will try to unlink fake
+   chunk.
 
    @code
         +---------------------------------------+
@@ -112,23 +137,7 @@
         +---------------------------------------+
    @end
 
-   Using a heap overflow we can achieve all of the above.
-
-   Now, when we free chunk2, it thinks that it's adjacent to a free chunk, and will trigger the unlink() macro.
-
-** Limitations
-
-   Both fd and bk will get written, so if either is protected/non-existent memory, the program will crash.
-
-** Protections
-
-*** Double linked list corruption
-
-    By checking if `p->fd->bk == p` and `p->bk->fd == p`, the binary can prevent easy control of this write primitive. 
-
-    To mitigate this, we can forge a fake chunk and trick the binary into thinking the fake chunk is valid. Then we
-    place this fake chunk at our desired location in memory.
-
-*** Size check
-
-    The size of the fake chunk must be equal to the previous size of the 
+   Now, when we free chunk2, it thinks that fake chunk is freed, and will
+   trigger the unlink() macro. Since `fake_chunk->bk` is pointing -0x10 from
+   the pointer to chunk1, it will write `fake_chunk->fd` to pointer to chunk1.
+   Thus, by writing to chunk1, we can change the write address and value.

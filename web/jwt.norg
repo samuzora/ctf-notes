@@ -1,0 +1,6 @@
+* JWKS claim overwrite
+
+Key pair can be generated using {https://mkjwt.org} The key pair can then be placed in a `jwks.json` file, and either
+uploaded to server or hosted on attacker server.
+
+Then edit the JWT to make it point to your key pair, and use {https://jwt.io} to edit the fields.

@@ -1,0 +1,5 @@
+* Policies
+
+Policies can be described via `get-policy-version`, `get-role-policy`.
+
+It will list out all the actions the user/role can perform. If there's an asterisk it matches 0 or more characters. eg. `Get*Policy` can perform `GetRolePolicy`, `GetUserPolicy` etc.

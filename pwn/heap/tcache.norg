@@ -3,13 +3,13 @@
   GLIBC >= 2.26
 
   The tcache bin is a LIFO structure, so chunks first freed are first used. It stores up to 7 free chunks of matching
-  size, from 0x20 to 0x90, in a singly-linked list. Each freed chunk looks like this:
+  size, from 0x20 to 0x410, in a singly-linked list. Each freed chunk looks like this:
 
   @code
   ┌───────────────────────────────────────────────────┐
   │ 00 00 00 00 00 00 00 00 | 00 00 00 00 00 00 00 21 │
   │---------------------------------------------------│
-  │ fd points to next free  | 00 00 00 00 00 00 00 00 │
+  │ fd points to next free  |       tcache_key        │
   └───────────────────────────────────────────────────┘
   @end
 
@@ -18,10 +18,10 @@
   On glibc >= 2.34, fd is encrypted using xor. The encryptor and decryptor functions are written in Python below:
 
   @code python
-  def encrypt(pos, ptr):
+def encrypt(pos, ptr):
     return (pos >> 12) ^ ptr
 
-  def decrypt(val):
+def decrypt(val):
     mask = 0xfff << 52
     while mask:
         v = val & mask

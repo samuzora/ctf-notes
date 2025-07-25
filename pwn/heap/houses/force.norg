@@ -1,0 +1,5 @@
+* House of Force
+
+- < 2.27
+- Control top chunk size (via overflow etc)
+- Pass arbitrarily large sizes to malloc

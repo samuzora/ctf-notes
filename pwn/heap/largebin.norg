@@ -1,0 +1,18 @@
+* How the largebin works
+
+Each largebin stores a range of sizes of chunks. The bin is sorted by size, so the array of chunks has to be doubly linked.
+
+@code
+        ┌──────────────────────────────┐
+   0x00 │   prev size  |     size      │
+        │------------------------------│
+   0x10 │      fd      |       bk      │
+        │------------------------------│
+   0x20 │ fd_nextsize  | bk_nextsize   │
+        └──────────────────────────────┘
+@end
+
+`fd_nextsize` points to the next chunk in the largebin that is smaller, and vice versa for `bk_nextsize`. If it is the largest/smallest, then the respective pointer will point to some libc value.
+
+During allocation there is a further check:
+~ `size == prev_size(fd)`

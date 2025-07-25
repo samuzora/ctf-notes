@@ -1,0 +1,52 @@
+* Info
+
+@code c
+struct pipe_buffer {
+  struct page *page;
+  unsigned int offset, len;
+  const struct pipe_buf_operations *ops;
+  unsigned int flags;
+  unsigned long private;
+};
+
+struct pipe_buf_operations {
+	int (*confirm)(struct pipe_inode_info *, struct pipe_buffer *);
+	void (*release)(struct pipe_inode_info *, struct pipe_buffer *);
+	bool (*try_steal)(struct pipe_inode_info *, struct pipe_buffer *);
+	bool (*get)(struct pipe_inode_info *, struct pipe_buffer *);
+};
+@end
+
+- page: `kmalloc-cg-1k`
+- heap leak: nil
+- kbase leak: `pipe_buf_operations`
+- arb write: nil
+- arb read: nil
+- rop: `pipe_buf_operations->release`
+
+* ROP
+
+Get `pipe_buf_ops` to point to our fake vtable, and construct rop chain elsewhere to stack pivot after
+`pipe_buf_ops->release`.
+
+Works well with `sk_buff`!
+
+`msg_msg` is possible as well, but we can only control `pipe_buf_ops` via its `mtype`, and can't control the other
+fields. May lead to slub error due to detected double free
+
+* Interacting
+
+@code c
+size_t pipe_buf_spray = 0x5000;
+int pipe_buf_fds[pipe_buf_spray][2];
+for (int i = 0; i < pipe_buf_spray; i++) {
+  pipe(pipe_buf_fds[i]);
+}
+@end
+
+@code c
+for (int i = 0; i < pipe_buf_spray; i++) {
+  close(pipe_buf_fds[i][0]);
+  close(pipe_buf_fds[i][1]);
+}
+@end

