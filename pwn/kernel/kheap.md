@@ -1,7 +1,5 @@
 # What are pages?
 
-...
-
 ## `GFP_KERNEL` vs `GFP_KERNEL_ACCOUNT`
 
 `GFP_KERNEL` will allocate chunks in `kmalloc-x` pages, while
