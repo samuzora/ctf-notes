@@ -1,7 +1,6 @@
 # `seq_operations` struct
 
-> page: `kmalloc-cg-32`
-> ROP: 
+- _page_: `kmalloc-cg-32`
 
 ## Interacting with `seq_operations`
 

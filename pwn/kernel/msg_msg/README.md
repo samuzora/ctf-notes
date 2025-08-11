@@ -1,12 +1,12 @@
 # `msg_msg` struct
 
-> _page_: `kmalloc-cg-64` to `kmalloc-cg-4k` (higher pages will be allocated
-> using mmap)
-> _leak heap_: `fd` and `bk` pointers of heap chunks can be leaked (very useful!)
-> _leak kbase_: ?
-> _arbitary read/write_: `msgmsg_seg` + race condition (`msgmsg_seg` pointer to be
-> overwritten during `msgsnd`)
-> _ROP_: nil
+- _page_: `kmalloc-cg-64` to `kmalloc-cg-4k` (higher pages will be allocated
+- using mmap)
+- _leak heap_: `fd` and `bk` pointers of heap chunks can be leaked (very useful!)
+- _leak kbase_: ?
+- _arbitary read/write_: `msgmsg_seg` + race condition (`msgmsg_seg` pointer to be
+- overwritten during `msgsnd`)
+- _ROP_: nil
 
 `include/linux/msg.h`:
 
